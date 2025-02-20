@@ -1,0 +1,99 @@
+Sub Export_AccidentsData_To_Excel()
+    Dim conn As Object
+    Dim rs As Object
+    Dim excelApp As Object
+    Dim dbPath As String, excelPath As String
+    Dim ws As Worksheet
+    Dim query As String
+
+    ' Define file paths
+    dbPath = "C:\Projects\New York Accident\Traffic_Accidents.accdb"
+    excelPath = "C:\Projects\New York Accident\NYC_Accidents_Reports.xlsx"
+
+    ' Create Access Connection
+    Set conn = CreateObject("ADODB.Connection")
+    On Error Resume Next
+    conn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath & ";Persist Security Info=False;"
+    If Err.Number <> 0 Then
+        MsgBox "Error opening database: " & Err.Description, vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    MsgBox "? Database connection established!", vbInformation
+
+    ' Open Excel
+    Set excelApp = CreateObject("Excel.Application")
+    excelApp.Visible = True ' Show Excel for debugging
+    excelApp.Workbooks.Open excelPath
+
+    ' Ensure correct sheet exists
+    On Error Resume Next
+    Set ws = excelApp.ActiveWorkbook.Sheets(1)
+    If ws Is Nothing Then
+        MsgBox "? Sheet 'Report' not found in Excel file!", vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    MsgBox "? Excel sheet 'Report' selected!", vbInformation
+
+    ' FIXED SQL QUERY
+    query = "SELECT TOP 10 latitude, longitude, COUNT(*) AS accident_count " & _
+            "FROM Cleaned_NYC_AccidentsDBTable " & _
+            "GROUP BY latitude, longitude " & _
+            "ORDER BY COUNT(*) DESC;"
+
+    ' Debugging: Print query to Immediate Window
+    Debug.Print query
+
+    ' Execute Query
+    Set rs = conn.Execute(query)
+
+    ' Check if query returned records
+    If rs.EOF Then
+        MsgBox "? No data found for the query!", vbExclamation
+        Exit Sub
+    End If
+    MsgBox "? Query executed successfully!", vbInformation
+
+    ' Write column headers
+    ws.Cells(1, 1).Value = "Latitude"
+    ws.Cells(1, 2).Value = "Longitude"
+    ws.Cells(1, 3).Value = "Accident Count"
+    MsgBox "? Column headers written!", vbInformation
+
+    ' Write data to Excel
+    Dim i As Integer: i = 2
+    While Not rs.EOF
+        ws.Cells(i, 1).Value = rs.Fields(0).Value
+        ws.Cells(i, 2).Value = rs.Fields(1).Value
+        ws.Cells(i, 3).Value = rs.Fields(2).Value
+        rs.MoveNext
+        i = i + 1
+    Wend
+
+    ' Auto-scroll to top-left cell
+    ws.Range("A1").Select
+    excelApp.ActiveWindow.ScrollRow = 1
+    excelApp.ActiveWindow.ScrollColumn = 1
+
+
+    If excelApp.ActiveWorkbook.ReadOnly Then
+    MsgBox "?? File is read-only! Saving as a new file.", vbExclamation
+    excelApp.ActiveWorkbook.SaveAs "C:\Projects\New York Accident\NYC_Accidents_Reports_New.xlsx"
+    Else
+    excelApp.ActiveWorkbook.Save
+    End If
+    
+    ' Save & refresh
+    excelApp.ActiveWorkbook.Save
+    excelApp.ActiveWorkbook.RefreshAll
+    excelApp.Quit
+
+    ' Close connections
+    rs.Close
+    conn.Close
+
+    MsgBox "? Report Generated Successfully!", vbInformation
+End Sub
+
+

@@ -1,0 +1,21 @@
+Sub Import_CleanedCSV_to_Access()
+    Dim accessApp As Object
+    Dim dbPath As String, csvPath As String
+    
+    ' Define file paths
+    dbPath = CProjectsNew York AccidentTraffic_Accidents.accdb
+    csvPath = CProjectsNew York AccidentCleaned_NYC_Accidents.csv
+    
+    ' Open MS Access
+    Set accessApp = CreateObject(Access.Application)
+    accessApp.OpenCurrentDatabase dbPath
+    
+    ' Import CSV into MS Access Table
+    accessApp.DoCmd.TransferText acImportDelim, , AccidentsTable, csvPath, True
+
+    ' Close Access
+    accessApp.CloseCurrentDatabase
+    Set accessApp = Nothing
+    
+    MsgBox ✅ CSV successfully imported into MS Access!, vbInformation
+End Sub
